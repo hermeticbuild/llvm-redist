@@ -5,8 +5,8 @@ VERSION="${1:?usage: tools/create-release.sh <version> <artifact> [checksum]}"
 ARTIFACT="${2:?usage: tools/create-release.sh <version> <artifact> [checksum]}"
 CHECKSUM="${3:-}"
 
-TAG="llvmorg-${VERSION}-zst"
-TITLE="LLVM ${VERSION} source tar.zst"
+TAG="llvmorg-${VERSION}-r1"
+TITLE="LLVM ${VERSION} (repacked)"
 NOTES="Repacked from upstream release llvmorg-${VERSION}."
 
 if [[ -n "${CHECKSUM}" ]]; then

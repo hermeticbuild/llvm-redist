@@ -30,7 +30,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          tag="llvmorg-${{ steps.latest.outputs.version }}-zst"
+          tag="llvmorg-${{ steps.latest.outputs.version }}-r1"
           if gh release view "${tag}" >/dev/null 2>&1; then
             echo "exists=true" >> "${GITHUB_OUTPUT}"
           else

@@ -38,3 +38,5 @@ fi
 
 echo "Artifact: ${OUT_TAR_ZST}"
 echo "Checksum: ${OUT_TAR_ZST}.sha256"
+
+rm -rf "${WORK_DIR}"
