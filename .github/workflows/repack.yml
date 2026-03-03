@@ -1,0 +1,48 @@
+name: repack-llvm-manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: LLVM version (example: 21.1.8)
+        required: true
+        default: 21.1.8
+        type: string
+      publish:
+        description: Publish GitHub release
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  repack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Repack
+        run: tools/repack-llvm.sh "${{ inputs.version }}"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llvm-project-${{ inputs.version }}.src.tar.zst
+          path: |
+            out/llvm-project-${{ inputs.version }}.src.tar.zst
+            out/llvm-project-${{ inputs.version }}.src.tar.zst.sha256
+          if-no-files-found: error
+
+      - name: Publish release
+        if: ${{ inputs.publish }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          tools/create-release.sh \
+            "${{ inputs.version }}" \
+            "out/llvm-project-${{ inputs.version }}.src.tar.zst" \
+            "out/llvm-project-${{ inputs.version }}.src.tar.zst.sha256"

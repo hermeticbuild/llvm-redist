@@ -1,0 +1,62 @@
+name: repack-llvm-nightly
+
+on:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PUBLISH_RELEASE: "false"
+
+jobs:
+  detect-and-repack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Resolve latest upstream release
+        id: latest
+        run: |
+          version="$(tools/latest-llvm-version.sh)"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check if already published in this repo
+        id: exists
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          tag="llvmorg-${{ steps.latest.outputs.version }}-zst"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Repack latest
+        if: ${{ steps.exists.outputs.exists == 'false' }}
+        run: tools/repack-llvm.sh "${{ steps.latest.outputs.version }}"
+
+      - name: Upload workflow artifact
+        if: ${{ steps.exists.outputs.exists == 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst
+          path: |
+            out/llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst
+            out/llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst.sha256
+          if-no-files-found: error
+
+      - name: Publish release
+        if: ${{ steps.exists.outputs.exists == 'false' && env.PUBLISH_RELEASE == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          tools/create-release.sh \
+            "${{ steps.latest.outputs.version }}" \
+            "out/llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst" \
+            "out/llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst.sha256"
