@@ -14,31 +14,28 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: write
-
 jobs:
   repack:
+    uses: ./.github/workflows/reusable-repack.yml
+    with:
+      version: ${{ inputs.version }}
+
+  publish-release:
+    if: ${{ inputs.publish }}
+    needs: repack
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: bazelbuild/setup-bazelisk@v3
-
-      - name: Repack
-        run: tools/repack-llvm.sh "${{ inputs.version }}"
-
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+      - name: Download workflow artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: llvm-project-${{ inputs.version }}.src.tar.zst
-          path: |
-            out/llvm-project-${{ inputs.version }}.src.tar.zst
-            out/llvm-project-${{ inputs.version }}.src.tar.zst.sha256
-          if-no-files-found: error
+          path: out
 
       - name: Publish release
-        if: ${{ inputs.publish }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |

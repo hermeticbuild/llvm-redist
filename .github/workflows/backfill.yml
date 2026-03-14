@@ -1,0 +1,146 @@
+name: repack-llvm-backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      min_major:
+        description: "Minimum LLVM major version"
+        required: true
+        default: "20"
+        type: string
+      force_repack:
+        description: "Force a new repack even if a release already exists"
+        required: true
+        default: false
+        type: boolean
+      max_parallel:
+        description: "Maximum concurrent repacks"
+        required: true
+        default: "3"
+        type: string
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      versions: ${{ steps.discover.outputs.versions }}
+      count: ${{ steps.discover.outputs.count }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Discover versions to repack
+        id: discover
+        env:
+          MIN_MAJOR: ${{ inputs.min_major }}
+          FORCE_REPACK: ${{ inputs.force_repack }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tmp_upstream="$(mktemp)"
+          tmp_sorted="$(mktemp)"
+          tmp_local="$(mktemp)"
+          tmp_versions="$(mktemp)"
+          trap 'rm -f "${tmp_upstream}" "${tmp_sorted}" "${tmp_local}" "${tmp_versions}"' EXIT
+
+          gh api repos/llvm/llvm-project/releases --paginate --jq '.[].tag_name' \
+          | while IFS= read -r tag; do
+              if [[ "${tag}" =~ ^llvmorg-([0-9]+)\.([0-9]+)\.([0-9]+)(-rc([0-9]+))?$ ]]; then
+                  major="${BASH_REMATCH[1]}"
+                  minor="${BASH_REMATCH[2]}"
+                  patch="${BASH_REMATCH[3]}"
+                  rc="${BASH_REMATCH[5]:-}"
+                  if (( major < MIN_MAJOR )); then
+                      continue
+                  fi
+
+                  if [[ -n "${rc}" ]]; then
+                      rc_key="${rc}"
+                  else
+                      rc_key="99999"
+                  fi
+
+                  printf "%05d.%05d.%05d.%05d %s\n" \
+                      "${major}" "${minor}" "${patch}" "${rc_key}" "${tag#llvmorg-}" \
+                      >> "${tmp_upstream}"
+              fi
+          done
+
+          sort -r "${tmp_upstream}" > "${tmp_sorted}"
+
+          gh release list --limit 1000 --json tagName --jq '.[].tagName' > "${tmp_local}"
+
+          while IFS= read -r line; do
+              version="$(echo "${line}" | cut -d' ' -f2-)"
+              if [[ "${FORCE_REPACK}" == "true" ]]; then
+                  printf '%s\n' "${version}" >> "${tmp_versions}"
+                  continue
+              fi
+
+              if grep -Eq "^llvmorg-${version}-r[0-9]+$" "${tmp_local}"; then
+                  continue
+              fi
+
+              printf '%s\n' "${version}" >> "${tmp_versions}"
+          done < "${tmp_sorted}"
+
+          versions_json="$(jq -R -s -c 'split("\n") | map(select(length > 0)) | map({version: .})' < "${tmp_versions}")"
+          count="$(jq 'length' <<< "${versions_json}")"
+
+          echo "versions=${versions_json}" >> "${GITHUB_OUTPUT}"
+          echo "count=${count}" >> "${GITHUB_OUTPUT}"
+
+  repack:
+    needs: discover
+    if: ${{ needs.discover.outputs.count != '0' }}
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix:
+        include: ${{ fromJSON(needs.discover.outputs.versions) }}
+    uses: ./.github/workflows/reusable-repack.yml
+    with:
+      version: ${{ matrix.version }}
+
+  publish:
+    needs:
+      - discover
+      - repack
+    if: ${{ needs.discover.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix:
+        include: ${{ fromJSON(needs.discover.outputs.versions) }}
+    concurrency:
+      group: backfill-publish-${{ matrix.version }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Download workflow artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: llvm-project-${{ matrix.version }}.src.tar.zst
+          path: out
+
+      - name: Resolve release tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(tools/next-release-tag.sh "${{ matrix.version }}")"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          tools/create-release.sh \
+            "${{ matrix.version }}" \
+            "out/llvm-project-${{ matrix.version }}.src.tar.zst" \
+            "out/llvm-project-${{ matrix.version }}.src.tar.zst.sha256" \
+            "${{ steps.tag.outputs.tag }}"

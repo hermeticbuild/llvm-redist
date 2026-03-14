@@ -4,8 +4,8 @@ set -euo pipefail
 VERSION="${1:?usage: tools/create-release.sh <version> <artifact> [checksum]}"
 ARTIFACT="${2:?usage: tools/create-release.sh <version> <artifact> [checksum]}"
 CHECKSUM="${3:-}"
+TAG="${4:-llvmorg-${VERSION}-r1}"
 
-TAG="llvmorg-${VERSION}-r1"
 TITLE="LLVM ${VERSION} (repacked)"
 NOTES="Repacked from upstream release llvmorg-${VERSION}."
 
