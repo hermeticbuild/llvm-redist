@@ -37,34 +37,9 @@ jobs:
   repack:
     needs: detect
     if: ${{ needs.detect.outputs.exists == 'false' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      attestations: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
-      - uses: bazelbuild/setup-bazelisk@6ecf4fd8b7d1f9721785f1dd656a689acf9add47
-
-      - name: Repack latest
-        run: tools/repack-llvm.sh "${{ needs.detect.outputs.version }}"
-
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst
-          path: |
-            out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst
-            out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst.sha256
-          if-no-files-found: error
-
-      - name: Attest release artifacts
-        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661
-        with:
-          subject-path: |
-            out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst
-            out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst.sha256
+    uses: ./.github/workflows/reusable-repack.yml
+    with:
+      version: ${{ needs.detect.outputs.version }}
 
   publish-release:
     needs:
