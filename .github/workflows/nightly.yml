@@ -38,6 +38,10 @@ jobs:
     needs: detect
     if: ${{ needs.detect.outputs.exists == 'false' }}
     uses: ./.github/workflows/reusable-repack.yml
+    permissions:
+      contents: read
+      attestations: write
+      id-token: write
     with:
       version: ${{ needs.detect.outputs.version }}
 

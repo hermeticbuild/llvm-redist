@@ -99,6 +99,10 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.discover.outputs.versions) }}
     uses: ./.github/workflows/reusable-repack.yml
+    permissions:
+      contents: read
+      attestations: write
+      id-token: write
     with:
       version: ${{ matrix.version }}
 

@@ -17,6 +17,10 @@ on:
 jobs:
   repack:
     uses: ./.github/workflows/reusable-repack.yml
+    permissions:
+      contents: read
+      attestations: write
+      id-token: write
     with:
       version: ${{ inputs.version }}
 
