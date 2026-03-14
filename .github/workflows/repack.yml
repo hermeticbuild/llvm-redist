@@ -14,14 +14,13 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: write
-  attestations: write
-  id-token: write
-
 jobs:
   repack:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      attestations: write
+      id-token: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
@@ -46,8 +45,22 @@ jobs:
             out/llvm-project-${{ inputs.version }}.src.tar.zst
             out/llvm-project-${{ inputs.version }}.src.tar.zst.sha256
 
+  publish-release:
+    if: ${{ inputs.publish }}
+    needs: repack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Download workflow artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: llvm-project-${{ inputs.version }}.src.tar.zst
+          path: out
+
       - name: Publish release
-        if: ${{ inputs.publish }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
