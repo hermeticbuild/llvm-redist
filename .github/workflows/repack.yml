@@ -23,15 +23,15 @@ jobs:
   repack:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
-      - uses: bazelbuild/setup-bazelisk@v3
+      - uses: bazelbuild/setup-bazelisk@6ecf4fd8b7d1f9721785f1dd656a689acf9add47
 
       - name: Repack
         run: tools/repack-llvm.sh "${{ inputs.version }}"
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: llvm-project-${{ inputs.version }}.src.tar.zst
           path: |
@@ -40,7 +40,7 @@ jobs:
           if-no-files-found: error
 
       - name: Attest release artifacts
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661
         with:
           subject-path: |
             out/llvm-project-${{ inputs.version }}.src.tar.zst
