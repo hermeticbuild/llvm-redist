@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  attestations: write
+  id-token: write
 
 jobs:
   detect-and-repack:
@@ -47,6 +49,14 @@ jobs:
             out/llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst
             out/llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst.sha256
           if-no-files-found: error
+
+      - name: Attest release artifacts
+        if: ${{ steps.exists.outputs.exists == 'false' }}
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            out/llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst
+            out/llvm-project-${{ steps.latest.outputs.version }}.src.tar.zst.sha256
 
       - name: Publish release
         if: ${{ steps.exists.outputs.exists == 'false' }}
