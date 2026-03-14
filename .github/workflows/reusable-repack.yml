@@ -14,6 +14,7 @@ jobs:
     permissions:
       contents: read
       attestations: write
+      artifact-metadata: write
       id-token: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -33,8 +34,22 @@ jobs:
           if-no-files-found: error
 
       - name: Attest release artifacts
-        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        id: attest
+        uses: actions/attest@281a49d4cbb0a72c9575a50d18f6deb515a11deb # v4
         with:
           subject-path: |
             out/llvm-project-${{ inputs.version }}.src.tar.zst
             out/llvm-project-${{ inputs.version }}.src.tar.zst.sha256
+
+      - name: Normalize attestation bundle filename
+        run: |
+          mv \
+            "${{ steps.attest.outputs.bundle-path }}" \
+            "out/llvm-project-${{ inputs.version }}.src.tar.zst.attestation.jsonl"
+
+      - name: Upload attestation bundle artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: llvm-project-${{ inputs.version }}.src.tar.zst.attestation
+          path: out/llvm-project-${{ inputs.version }}.src.tar.zst.attestation.jsonl
+          if-no-files-found: error

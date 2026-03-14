@@ -102,6 +102,7 @@ jobs:
     permissions:
       contents: read
       attestations: write
+      artifact-metadata: write
       id-token: write
     with:
       version: ${{ matrix.version }}
@@ -131,13 +132,11 @@ jobs:
           name: llvm-project-${{ matrix.version }}.src.tar.zst
           path: out
 
-      - name: Download attestation bundle
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tools/download-attestation.sh \
-            "out/llvm-project-${{ matrix.version }}.src.tar.zst" \
-            "${{ github.repository }}"
+      - name: Download attestation bundle artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: llvm-project-${{ matrix.version }}.src.tar.zst.attestation
+          path: out
 
       - name: Resolve release tag
         id: tag
