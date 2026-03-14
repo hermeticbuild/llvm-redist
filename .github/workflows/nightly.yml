@@ -62,6 +62,14 @@ jobs:
           name: llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst
           path: out
 
+      - name: Download attestation bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tools/download-attestation.sh \
+            "out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst" \
+            "${{ github.repository }}"
+
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -69,4 +77,6 @@ jobs:
           tools/create-release.sh \
             "${{ needs.detect.outputs.version }}" \
             "out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst" \
-            "out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst.sha256"
+            "out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst.sha256" \
+            "llvmorg-${{ needs.detect.outputs.version }}-r1" \
+            "out/llvm-project-${{ needs.detect.outputs.version }}.src.tar.zst.attestation.jsonl"

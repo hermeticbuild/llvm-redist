@@ -131,6 +131,14 @@ jobs:
           name: llvm-project-${{ matrix.version }}.src.tar.zst
           path: out
 
+      - name: Download attestation bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tools/download-attestation.sh \
+            "out/llvm-project-${{ matrix.version }}.src.tar.zst" \
+            "${{ github.repository }}"
+
       - name: Resolve release tag
         id: tag
         env:
@@ -147,4 +155,5 @@ jobs:
             "${{ matrix.version }}" \
             "out/llvm-project-${{ matrix.version }}.src.tar.zst" \
             "out/llvm-project-${{ matrix.version }}.src.tar.zst.sha256" \
-            "${{ steps.tag.outputs.tag }}"
+            "${{ steps.tag.outputs.tag }}" \
+            "out/llvm-project-${{ matrix.version }}.src.tar.zst.attestation.jsonl"
