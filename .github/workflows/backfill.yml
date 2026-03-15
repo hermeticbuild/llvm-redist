@@ -8,6 +8,11 @@ on:
         required: true
         default: "20"
         type: string
+      max_major:
+        description: "Maximum LLVM major version"
+        required: false
+        default: ""
+        type: string
       force_repack:
         description: "Force a new repack even if a release already exists"
         required: true
@@ -34,6 +39,7 @@ jobs:
         id: discover
         env:
           MIN_MAJOR: ${{ inputs.min_major }}
+          MAX_MAJOR: ${{ inputs.max_major }}
           FORCE_REPACK: ${{ inputs.force_repack }}
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -51,6 +57,9 @@ jobs:
                   patch="${BASH_REMATCH[3]}"
                   rc="${BASH_REMATCH[5]:-}"
                   if (( major < MIN_MAJOR )); then
+                      continue
+                  fi
+                  if [[ -n "${MAX_MAJOR}" ]] && (( major > MAX_MAJOR )); then
                       continue
                   fi
 
