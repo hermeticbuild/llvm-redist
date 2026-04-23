@@ -51,11 +51,10 @@ jobs:
 
           gh api repos/llvm/llvm-project/releases --paginate --jq '.[].tag_name' \
           | while IFS= read -r tag; do
-              if [[ "${tag}" =~ ^llvmorg-([0-9]+)\.([0-9]+)\.([0-9]+)(-rc([0-9]+))?$ ]]; then
+              if [[ "${tag}" =~ ^llvmorg-([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
                   major="${BASH_REMATCH[1]}"
                   minor="${BASH_REMATCH[2]}"
                   patch="${BASH_REMATCH[3]}"
-                  rc="${BASH_REMATCH[5]:-}"
                   if (( major < MIN_MAJOR )); then
                       continue
                   fi
@@ -63,14 +62,8 @@ jobs:
                       continue
                   fi
 
-                  if [[ -n "${rc}" ]]; then
-                      rc_key="${rc}"
-                  else
-                      rc_key="99999"
-                  fi
-
-                  printf "%05d.%05d.%05d.%05d %s\n" \
-                      "${major}" "${minor}" "${patch}" "${rc_key}" "${tag#llvmorg-}" \
+                  printf "%05d.%05d.%05d %s\n" \
+                      "${major}" "${minor}" "${patch}" "${tag#llvmorg-}" \
                       >> "${tmp_upstream}"
               fi
           done
